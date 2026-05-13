@@ -1,28 +1,83 @@
-// التهيئة وقاعدة البيانات المحلية
+// التهيئة وقاعدة البيانات
 let users = JSON.parse(localStorage.getItem('isp_users')) || [];
 let currentUserId = null;
 
-// دالة تحديث الواجهة الرئيسية
+// إعداد الوضع الليلي والنهاري
+function initTheme() {
+    let isDark = localStorage.getItem('theme') === 'dark';
+    if (isDark) {
+        document.body.setAttribute('data-theme', 'dark');
+        document.getElementById('themeIcon').classList.replace('fa-moon', 'fa-sun');
+    }
+}
+function toggleTheme() {
+    let body = document.body;
+    let icon = document.getElementById('themeIcon');
+    if (body.getAttribute('data-theme') === 'dark') {
+        body.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
+        icon.classList.replace('fa-sun', 'fa-moon');
+    } else {
+        body.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+        icon.classList.replace('fa-moon', 'fa-sun');
+    }
+}
+initTheme();
+
+// دوال التاريخ والوقت
+function formatDateTimeLocal(date) {
+    let d = new Date(date);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+}
+
+function formatDateDisplay(dateStr) {
+    let d = new Date(dateStr);
+    return d.toLocaleString('ar-IQ', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+function calculateTimeStatus(startDateStr, endDateStr) {
+    let now = new Date();
+    let end = new Date(endDateStr);
+    let diffMs = end - now;
+
+    if (diffMs <= 0) {
+        return { status: 'غير متصل', text: 'منتهي الصلاحية', colorClass: 'status-offline' };
+    }
+
+    let diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    let diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    
+    return { 
+        status: 'متصل', 
+        text: `باقي ${diffDays} يوم و ${diffHours} ساعة`, 
+        colorClass: 'status-online' 
+    };
+}
+
+// تحديث الواجهة الرئيسية
 function renderHome() {
     const list = document.getElementById('subscribersList');
     list.innerHTML = '';
     
     if(users.length === 0) {
-        list.innerHTML = '<p style="text-align:center; color:#888; margin-top:20px;">لا يوجد مشتركين. اضغط على + للإضافة.</p>';
+        list.innerHTML = '<p style="text-align:center; color:var(--text-muted); margin-top:20px;">لا يوجد مشتركين. اضغط على + للإضافة.</p>';
         return;
     }
 
     users.forEach(user => {
+        let timeData = calculateTimeStatus(user.startDate, user.endDate);
         let card = document.createElement('div');
         card.className = 'user-card';
         card.onclick = () => openProfile(user.id);
         card.innerHTML = `
             <div class="user-info">
                 <h4>${user.name}</h4>
-                <p><span style="color: ${user.status === 'متصل' ? '#10B981' : '#EF4444'}">● ${user.status}</span> | ${user.price} د.ع | ${user.tower}</p>
+                <p><span class="${timeData.colorClass}">● ${timeData.status}</span> | ${user.price} د.ع | ${user.tower}</p>
             </div>
             <div class="user-action">
-                <i class="fas fa-chevron-left" style="color:#ccc;"></i>
+                <i class="fas fa-chevron-left" style="color:var(--text-muted);"></i>
             </div>
         `;
         list.appendChild(card);
@@ -36,7 +91,14 @@ function showView(viewId) {
 }
 function goHome() { showView('view-home'); currentUserId = null; renderHome(); }
 
-// إدارة النوافذ المنبثقة (Modals)
+// رسالة الصيانة (الأزرار السفلية)
+function showMaintenance() {
+    let toast = document.getElementById('maintenanceToast');
+    toast.classList.add('show');
+    setTimeout(() => { toast.classList.remove('show'); }, 3000);
+}
+
+// إضافة أو تعديل
 function openAddModal() {
     currentUserId = null;
     document.getElementById('modalTitle').innerText = 'إضافة مشترك جديد';
@@ -47,11 +109,12 @@ function openAddModal() {
     document.getElementById('f-price').value = '';
     document.getElementById('f-tower').value = '';
     document.getElementById('f-user').value = '';
+    document.getElementById('f-start-date').value = formatDateTimeLocal(new Date());
     document.getElementById('userModal').classList.add('active');
 }
 
 function openEditModal() {
-    toggleMenu(); // غلق القائمة المنسدلة
+    toggleMenu(); 
     let user = users.find(u => u.id === currentUserId);
     if(!user) return;
     
@@ -63,6 +126,7 @@ function openEditModal() {
     document.getElementById('f-price').value = user.price;
     document.getElementById('f-tower').value = user.tower;
     document.getElementById('f-user').value = user.user;
+    document.getElementById('f-start-date').value = formatDateTimeLocal(user.startDate);
     document.getElementById('userModal').classList.add('active');
 }
 
@@ -70,9 +134,11 @@ function closeModals() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
 }
 
-// حفظ أو تعديل بيانات المشترك
 function saveUser() {
     let id = document.getElementById('f-id').value;
+    let startDateObj = new Date(document.getElementById('f-start-date').value || new Date());
+    let endDateObj = new Date(startDateObj.getTime() + (30 * 24 * 60 * 60 * 1000)); // إضافة 30 يوم
+
     let newUser = {
         id: id ? parseInt(id) : Date.now(),
         name: document.getElementById('f-name').value,
@@ -81,29 +147,23 @@ function saveUser() {
         price: document.getElementById('f-price').value || 0,
         tower: document.getElementById('f-tower').value || 'N/A',
         user: document.getElementById('f-user').value || 'N/A',
-        ip: '100.' + Math.floor(Math.random()*255) + '.x.x', // توليد IP وهمي للتجربة
-        status: 'متصل',
+        ip: '100.' + Math.floor(Math.random()*255) + '.x.x',
+        startDate: startDateObj.toISOString(),
+        endDate: endDateObj.toISOString(),
         history: []
     };
 
-    if(!newUser.name || !newUser.phone) {
-        alert("الاسم ورقم الهاتف مطلوبان!"); return;
-    }
+    if(!newUser.name || !newUser.phone) { alert("الاسم ورقم الهاتف مطلوبان!"); return; }
 
     if (id) {
-        // تحديث
         let index = users.findIndex(u => u.id == id);
-        newUser.history = users[index].history; // الحفاظ على السجل القديم
+        newUser.history = users[index].history; 
         users[index] = newUser;
     } else {
-        // إضافة جديدة وتسجيل أول إيداع في السجل
         if(newUser.price > 0) {
             newUser.history.push({
-                id: Date.now(),
-                type: 'deposit',
-                amount: newUser.price,
-                date: new Date().toLocaleString('ar-IQ'),
-                balance: newUser.price
+                id: Date.now(), type: 'deposit', amount: newUser.price,
+                date: new Date().toLocaleString('ar-IQ'), balance: newUser.price
             });
         }
         users.push(newUser);
@@ -111,16 +171,16 @@ function saveUser() {
 
     localStorage.setItem('isp_users', JSON.stringify(users));
     closeModals();
-    
-    if(id) openProfile(newUser.id); // إذا كان تعديل، ارجع للبروفايل
-    else renderHome(); // إذا إضافة جديدة، ارجع للرئيسية
+    if(id) openProfile(newUser.id); else renderHome(); 
 }
 
-// فتح بروفايل المشترك
+// بروفايل المشترك
 function openProfile(id) {
     currentUserId = id;
     let user = users.find(u => u.id === id);
     if(!user) return;
+
+    let timeData = calculateTimeStatus(user.startDate, user.endDate);
 
     document.getElementById('p-name').innerText = user.name;
     document.getElementById('p-deposit').innerText = user.price;
@@ -128,22 +188,55 @@ function openProfile(id) {
     document.getElementById('p-tower').innerText = user.tower;
     document.getElementById('p-user').innerText = user.user;
     document.getElementById('p-ip').innerText = user.ip;
-    document.getElementById('p-days').innerText = "30 يوم"; // يمكن برمجتها كمعادلة زمنية لاحقاً
+    
+    let statusEl = document.getElementById('p-status');
+    statusEl.innerHTML = `<i class="fas fa-circle"></i> ${timeData.status}`;
+    statusEl.className = timeData.colorClass;
+
+    document.getElementById('p-days').innerText = timeData.text;
+    document.getElementById('p-start-date').innerText = formatDateDisplay(user.startDate);
+    document.getElementById('p-end-date').innerText = formatDateDisplay(user.endDate);
 
     showView('view-profile');
 }
 
-// القائمة المنسدلة (تعديل/إيقاف)
-function toggleMenu() {
-    document.getElementById('userMenu').classList.toggle('active');
+// تجديد وإيقاف الاشتراك
+function openRenewModal() {
+    document.getElementById('r-date').value = formatDateTimeLocal(new Date());
+    document.getElementById('renewModal').classList.add('active');
 }
 
-// نظام المشاركة والواتساب
+function confirmRenew() {
+    let user = users.find(u => u.id === currentUserId);
+    let selectedDate = new Date(document.getElementById('r-date').value);
+    let endDateObj = new Date(selectedDate.getTime() + (30 * 24 * 60 * 60 * 1000));
+
+    user.startDate = selectedDate.toISOString();
+    user.endDate = endDateObj.toISOString();
+    
+    localStorage.setItem('isp_users', JSON.stringify(users));
+    closeModals();
+    openProfile(currentUserId);
+}
+
+function stopSubscription() {
+    toggleMenu();
+    if(confirm('هل أنت متأكد من إيقاف المشترك فوراً؟')) {
+        let user = users.find(u => u.id === currentUserId);
+        user.endDate = new Date().toISOString(); // تعيين الانتهاء للوقت الحالي
+        localStorage.setItem('isp_users', JSON.stringify(users));
+        openProfile(currentUserId);
+    }
+}
+
+// القائمة والواتساب والسجل
+function toggleMenu() { document.getElementById('userMenu').classList.toggle('active'); }
+
 function openShareModal() {
     let user = users.find(u => u.id === currentUserId);
-    if(!user) return;
-
-    let text = `مرحباً ${user.name}،\n\nنود إعلامك بأن اشتراكك من النوع ${user.package} قد تم تفعيله بنجاح.\nبرج: ${user.tower}\nقيمة الاشتراك: ${user.price} د.ع\n\nفي حال احتجت لأي مساعدة، لا تتردد في التواصل معنا.`;
+    let timeData = calculateTimeStatus(user.startDate, user.endDate);
+    
+    let text = `مرحباً ${user.name}،\n\nنود إعلامك بأن اشتراكك من النوع ${user.package} ينتهي بتاريخ ${formatDateDisplay(user.endDate)}.\nبرج: ${user.tower}\nقيمة الاشتراك: ${user.price} د.ع\nالحالة الحالية: ${timeData.status}\n\nفي حال احتجت لأي مساعدة، لا تتردد في التواصل معنا.`;
     
     document.getElementById('shareText').value = text;
     document.getElementById('shareModal').classList.add('active');
@@ -152,16 +245,12 @@ function openShareModal() {
 function sendWhatsApp() {
     let user = users.find(u => u.id === currentUserId);
     let text = encodeURIComponent(document.getElementById('shareText').value);
-    
-    // تنظيف رقم الهاتف (إزالة الأصفار الزائدة وتحويله للصيغة الدولية للعراق)
     let phone = user.phone;
     if(phone.startsWith('0')) phone = '964' + phone.substring(1);
-    
     window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
     closeModals();
 }
 
-// السجل المالي (إيداع / دين)
 function openDepositModal() {
     document.getElementById('t-amount').value = '';
     document.getElementById('depositModal').classList.add('active');
@@ -171,51 +260,38 @@ function saveTransaction() {
     let user = users.find(u => u.id === currentUserId);
     let type = document.getElementById('t-type').value;
     let amount = parseFloat(document.getElementById('t-amount').value);
-    
     if(!amount || amount <= 0) return;
 
     let currentBalance = parseFloat(user.price) || 0;
     let newBalance = type === 'deposit' ? currentBalance + amount : currentBalance - amount;
 
     user.history.unshift({
-        id: Date.now(),
-        type: type,
-        amount: amount,
-        date: new Date().toLocaleString('ar-IQ'),
-        balance: newBalance
+        id: Date.now(), type: type, amount: amount,
+        date: new Date().toLocaleString('ar-IQ'), balance: newBalance
     });
-
-    user.price = newBalance; // تحديث الرصيد الكلي
+    user.price = newBalance;
     localStorage.setItem('isp_users', JSON.stringify(users));
-    
-    closeModals();
-    openProfile(currentUserId); // تحديث الواجهة
+    closeModals(); openProfile(currentUserId); 
 }
 
 function openHistory() {
     let user = users.find(u => u.id === currentUserId);
     let list = document.getElementById('historyList');
     list.innerHTML = '';
-
-    if(user.history.length === 0) {
-        list.innerHTML = '<p style="text-align:center;">لا يوجد سجل حركات.</p>';
-    } else {
+    if(user.history.length === 0) { list.innerHTML = '<p style="text-align:center;">لا يوجد سجل حركات.</p>'; } 
+    else {
         user.history.forEach(tx => {
             let isDeposit = tx.type === 'deposit';
             list.innerHTML += `
                 <div class="history-card">
                     <div style="display:flex; align-items:center; gap:15px;">
-                        <div class="history-icon ${isDeposit ? 'bg-green' : 'bg-orange'}">
-                            <i class="fas ${isDeposit ? 'fa-money-bill-wave' : 'fa-hand-holding-usd'}"></i>
-                        </div>
+                        <div class="history-icon ${isDeposit ? 'bg-green' : 'bg-orange'}"><i class="fas ${isDeposit ? 'fa-money-bill-wave' : 'fa-hand-holding-usd'}"></i></div>
                         <div>
                             <h4>${isDeposit ? 'إيداع' : 'إضافة دين'} ${tx.amount} د.ع</h4>
-                            <p>${tx.date}</p>
-                            <p style="font-size:11px; margin-top:4px;">الرصيد الكلي بعد: ${tx.balance} د.ع</p>
+                            <p>${tx.date}</p><p style="font-size:11px; margin-top:4px;">الرصيد الكلي بعد: ${tx.balance} د.ع</p>
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
         });
     }
     showView('view-history');
@@ -223,7 +299,6 @@ function openHistory() {
 
 function closeHistory() { showView('view-profile'); }
 
-// بحث
 function filterUsers() {
     let val = document.getElementById('searchInput').value.toLowerCase();
     document.querySelectorAll('.user-card').forEach(card => {
@@ -232,5 +307,4 @@ function filterUsers() {
     });
 }
 
-// تشغيل الواجهة عند فتح الصفحة
 window.onload = renderHome;
