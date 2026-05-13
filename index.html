@@ -5,10 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام إدارة المشتركين</title>
     <link rel="stylesheet" href="style.css">
-    <!-- مكتبة FontAwesome للأيقونات -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+
+<!-- زر الوضع الليلي/النهاري -->
+<button id="themeToggle" class="btn-icon theme-btn" onclick="toggleTheme()">
+    <i class="fas fa-moon" id="themeIcon"></i>
+</button>
+
+<!-- رسالة الصيانة المتحركة (Toast) -->
+<div id="maintenanceToast" class="toast">
+    <i class="fas fa-tools"></i> هذا الزر قيد الصيانة حالياً
+</div>
 
 <div class="app-container">
     
@@ -44,7 +53,7 @@
                     <button class="btn-icon" onclick="toggleMenu()"><i class="fas fa-ellipsis-v"></i></button>
                     <div class="dropdown-menu" id="userMenu">
                         <a href="#" onclick="openEditModal()"><i class="fas fa-pen"></i> تعديل المعلومات</a>
-                        <a href="#"><i class="fas fa-pause-circle"></i> إيقاف</a>
+                        <a href="#" onclick="stopSubscription()"><i class="fas fa-pause-circle"></i> إيقاف</a>
                     </div>
                 </div>
             </div>
@@ -56,8 +65,10 @@
         </div>
 
         <div class="profile-details card">
-            <div class="detail-row"><span>الحالة</span> <span id="p-status" class="status-online"><i class="fas fa-circle"></i> متصل</span></div>
-            <div class="detail-row"><span>المتبقي</span> <span id="p-days">--</span></div>
+            <div class="detail-row"><span>الحالة</span> <span id="p-status"><i class="fas fa-circle"></i> --</span></div>
+            <div class="detail-row"><span>المتبقي</span> <span id="p-days" style="font-weight: bold; color: var(--warning-orange);">--</span></div>
+            <div class="detail-row"><span>وقت التفعيل</span> <span id="p-start-date" class="text-muted-small">--</span></div>
+            <div class="detail-row"><span>تاريخ الإيقاف</span> <span id="p-end-date" class="text-muted-small">--</span></div>
             <div class="detail-row"><span>نوع الاشتراك</span> <span id="p-package" class="text-blue">--</span></div>
             <div class="detail-row"><span>البرج</span> <span id="p-tower">--</span></div>
             <div class="detail-row"><span>اليوزر</span> <span id="p-user">--</span></div>
@@ -66,7 +77,7 @@
 
         <div class="action-buttons-bottom">
             <button class="btn-outline" onclick="openDepositModal()"><i class="fas fa-credit-card"></i> إيداع مبلغ</button>
-            <button class="btn-primary" onclick="renewSubscription()"><i class="fas fa-sync"></i> تجديد الاشتراك</button>
+            <button class="btn-primary" onclick="openRenewModal()"><i class="fas fa-sync"></i> تجديد الاشتراك</button>
         </div>
     </div>
 
@@ -76,17 +87,15 @@
             <button class="btn-icon" onclick="closeHistory()"><i class="fas fa-arrow-right"></i></button>
             <h2>السجل</h2>
         </header>
-        <div class="history-list" id="historyList">
-            <!-- سيتم إضافة السجل هنا -->
-        </div>
+        <div class="history-list" id="historyList"></div>
     </div>
 
     <!-- شريط التنقل السفلي -->
     <nav class="bottom-nav">
-        <a href="#" class="nav-item active"><i class="fas fa-users"></i><span>المشتركين</span></a>
-        <a href="#" class="nav-item"><i class="fas fa-satellite-dish"></i><span>الأجهزة</span></a>
-        <a href="#" class="nav-item"><i class="fas fa-chart-bar"></i><span>الاحصائيات</span></a>
-        <a href="#" class="nav-item"><i class="fas fa-ellipsis-h"></i><span>المزيد</span></a>
+        <a href="#" class="nav-item active" onclick="goHome()"><i class="fas fa-users"></i><span>المشتركين</span></a>
+        <a href="#" class="nav-item" onclick="showMaintenance()"><i class="fas fa-satellite-dish"></i><span>الأجهزة</span></a>
+        <a href="#" class="nav-item" onclick="showMaintenance()"><i class="fas fa-chart-bar"></i><span>الاحصائيات</span></a>
+        <a href="#" class="nav-item" onclick="showMaintenance()"><i class="fas fa-ellipsis-h"></i><span>المزيد</span></a>
     </nav>
 
     <!-- Modal: إضافة/تعديل مشترك -->
@@ -100,8 +109,24 @@
             <input type="number" id="f-price" class="input-field" placeholder="المبلغ المدفوع (د.ع)">
             <input type="text" id="f-tower" class="input-field" placeholder="البرج">
             <input type="text" id="f-user" class="input-field" placeholder="اليوزر">
+            <label style="font-size: 12px; margin-top: 10px; display: block;">تاريخ ووقت التفعيل (يضاف له 30 يوم تلقائياً)</label>
+            <input type="datetime-local" id="f-start-date" class="input-field">
             <div class="modal-btns">
                 <button class="btn-primary" onclick="saveUser()">حفظ</button>
+                <button class="btn-outline" onclick="closeModals()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: تجديد الاشتراك -->
+    <div class="modal-overlay" id="renewModal">
+        <div class="modal-content glass-effect">
+            <h3>تجديد الاشتراك</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">سيتم تمديد الاشتراك لمدة 30 يوماً من التاريخ المحدد أدناه.</p>
+            <label style="font-size: 12px;">تاريخ التفعيل الجديد:</label>
+            <input type="datetime-local" id="r-date" class="input-field">
+            <div class="modal-btns">
+                <button class="btn-primary" onclick="confirmRenew()">تأكيد التجديد</button>
                 <button class="btn-outline" onclick="closeModals()">إلغاء</button>
             </div>
         </div>
