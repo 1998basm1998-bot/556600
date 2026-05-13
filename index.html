@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة المشتركين</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- مكتبة FontAwesome للأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="app-container">
+    
+    <!-- واجهة المشتركين الرئيسية -->
+    <div id="view-home" class="view-section active">
+        <header class="top-header">
+            <button class="btn-icon btn-add" onclick="openAddModal()">
+                <i class="fas fa-plus"></i>
+            </button>
+            <div class="header-filters">
+                <button class="btn-icon"><i class="fas fa-filter"></i></button>
+            </div>
+        </header>
+        
+        <div class="search-bar">
+            <input type="text" placeholder="بحث عن مشترك..." id="searchInput" onkeyup="filterUsers()">
+        </div>
+
+        <div class="subscribers-list" id="subscribersList">
+            <!-- سيتم إضافة المشتركين هنا بواسطة الجافا سكريبت -->
+        </div>
+    </div>
+
+    <!-- واجهة بروفايل المشترك -->
+    <div id="view-profile" class="view-section">
+        <header class="profile-header-bar">
+            <button class="btn-icon" onclick="goHome()"><i class="fas fa-arrow-right"></i></button>
+            <div class="profile-actions">
+                <button class="btn-icon" onclick="openDepositModal()"><i class="fas fa-dollar-sign"></i></button>
+                <button class="btn-icon" onclick="openShareModal()"><i class="fas fa-bell"></i></button>
+                <button class="btn-icon" onclick="openHistory()"><i class="fas fa-history"></i></button>
+                <div class="dropdown">
+                    <button class="btn-icon" onclick="toggleMenu()"><i class="fas fa-ellipsis-v"></i></button>
+                    <div class="dropdown-menu" id="userMenu">
+                        <a href="#" onclick="openEditModal()"><i class="fas fa-pen"></i> تعديل المعلومات</a>
+                        <a href="#"><i class="fas fa-pause-circle"></i> إيقاف</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="profile-card dark-card">
+            <h2 id="p-name">--</h2>
+            <p>الإيداع: <span id="p-deposit">0</span> د.ع</p>
+        </div>
+
+        <div class="profile-details card">
+            <div class="detail-row"><span>الحالة</span> <span id="p-status" class="status-online"><i class="fas fa-circle"></i> متصل</span></div>
+            <div class="detail-row"><span>المتبقي</span> <span id="p-days">--</span></div>
+            <div class="detail-row"><span>نوع الاشتراك</span> <span id="p-package" class="text-blue">--</span></div>
+            <div class="detail-row"><span>البرج</span> <span id="p-tower">--</span></div>
+            <div class="detail-row"><span>اليوزر</span> <span id="p-user">--</span></div>
+            <div class="detail-row"><span>IP</span> <span id="p-ip">--</span></div>
+        </div>
+
+        <div class="action-buttons-bottom">
+            <button class="btn-outline" onclick="openDepositModal()"><i class="fas fa-credit-card"></i> إيداع مبلغ</button>
+            <button class="btn-primary" onclick="renewSubscription()"><i class="fas fa-sync"></i> تجديد الاشتراك</button>
+        </div>
+    </div>
+
+    <!-- واجهة السجل (التاريخ) -->
+    <div id="view-history" class="view-section">
+        <header class="profile-header-bar">
+            <button class="btn-icon" onclick="closeHistory()"><i class="fas fa-arrow-right"></i></button>
+            <h2>السجل</h2>
+        </header>
+        <div class="history-list" id="historyList">
+            <!-- سيتم إضافة السجل هنا -->
+        </div>
+    </div>
+
+    <!-- شريط التنقل السفلي -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active"><i class="fas fa-users"></i><span>المشتركين</span></a>
+        <a href="#" class="nav-item"><i class="fas fa-satellite-dish"></i><span>الأجهزة</span></a>
+        <a href="#" class="nav-item"><i class="fas fa-chart-bar"></i><span>الاحصائيات</span></a>
+        <a href="#" class="nav-item"><i class="fas fa-ellipsis-h"></i><span>المزيد</span></a>
+    </nav>
+
+    <!-- Modal: إضافة/تعديل مشترك -->
+    <div class="modal-overlay" id="userModal">
+        <div class="modal-content glass-effect">
+            <h3 id="modalTitle">إضافة مشترك جديد</h3>
+            <input type="hidden" id="f-id">
+            <input type="text" id="f-name" class="input-field" placeholder="اسم المشترك">
+            <input type="tel" id="f-phone" class="input-field" placeholder="رقم الهاتف (مثال: 07700000000)">
+            <input type="text" id="f-package" class="input-field" placeholder="نوع الاشتراك (مثال: Free Admin)">
+            <input type="number" id="f-price" class="input-field" placeholder="المبلغ المدفوع (د.ع)">
+            <input type="text" id="f-tower" class="input-field" placeholder="البرج">
+            <input type="text" id="f-user" class="input-field" placeholder="اليوزر">
+            <div class="modal-btns">
+                <button class="btn-primary" onclick="saveUser()">حفظ</button>
+                <button class="btn-outline" onclick="closeModals()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: المشاركة (الواتساب) -->
+    <div class="modal-overlay" id="shareModal">
+        <div class="modal-content glass-effect">
+            <h3>مشاركة</h3>
+            <p class="share-note">سيتم إرسال رسالة تفصيلية للمشترك.</p>
+            <textarea id="shareText" class="input-field" rows="6"></textarea>
+            <div class="modal-btns flex-col">
+                <button class="btn-primary" onclick="sendWhatsApp()"><i class="fab fa-whatsapp"></i> إرسال عبر WhatsApp</button>
+                <button class="btn-outline" onclick="closeModals()">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: إيداع/دين -->
+    <div class="modal-overlay" id="depositModal">
+        <div class="modal-content glass-effect">
+            <h3>العمليات المالية</h3>
+            <select id="t-type" class="input-field">
+                <option value="deposit">إيداع مبلغ</option>
+                <option value="debt">إضافة دين</option>
+            </select>
+            <input type="number" id="t-amount" class="input-field" placeholder="المبلغ (د.ع)">
+            <div class="modal-btns">
+                <button class="btn-primary" onclick="saveTransaction()">تأكيد</button>
+                <button class="btn-outline" onclick="closeModals()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
