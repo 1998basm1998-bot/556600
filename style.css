@@ -55,8 +55,11 @@ body {
 
 /* شاشة تسجيل الدخول */
 .login-wrapper {
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    flex-direction: column; justify-content: center; align-items: center;
     height: 100vh; padding: 20px;
+}
+.login-wrapper.active {
+    display: flex; /* تم إصلاح المشكلة هنا: تطبق فقط عندما تكون الشاشة نشطة */
 }
 .login-box {
     width: 100%; max-width: 320px; background: var(--card-bg);
