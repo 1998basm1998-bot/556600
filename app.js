@@ -23,7 +23,29 @@ function toggleTheme() {
         icon.classList.replace('fa-moon', 'fa-sun');
     }
 }
-initTheme();
+
+// نظام تسجيل الدخول
+function initApp() {
+    initTheme();
+    if(sessionStorage.getItem('auth') === 'true') {
+        document.getElementById('mainNav').style.display = 'flex';
+        goHome();
+    } else {
+        showView('view-login');
+    }
+}
+
+function checkLogin() {
+    let pwd = document.getElementById('loginPassword').value;
+    if(pwd === '07802427493') {
+        sessionStorage.setItem('auth', 'true');
+        document.getElementById('loginError').style.display = 'none';
+        document.getElementById('mainNav').style.display = 'flex';
+        goHome();
+    } else {
+        document.getElementById('loginError').style.display = 'block';
+    }
+}
 
 // دوال التاريخ والوقت
 function formatDateTimeLocal(date) {
@@ -32,7 +54,6 @@ function formatDateTimeLocal(date) {
     return d.toISOString().slice(0, 16);
 }
 
-// تعديل صيغة التاريخ لتطابق الصورة
 function formatDateDisplay(dateStr) {
     let d = new Date(dateStr);
     let yyyy = d.getFullYear();
@@ -52,21 +73,23 @@ function calculateTimeStatus(startDateStr, endDateStr) {
     let diffMs = end - now;
 
     if (diffMs <= 0) {
-        // تعديل "منتهي الصلاحية" إلى "منتهي" لتطابق الصورة
         return { status: 'غير متصل', text: 'منتهي', colorClass: 'status-offline' };
     }
 
     let diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     let diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     
-    return { 
-        status: 'متصل', 
-        text: `باقي ${diffDays} يوم و ${diffHours} ساعة`, 
-        colorClass: 'status-online' 
-    };
+    return { status: 'متصل', text: `باقي ${diffDays} يوم و ${diffHours} ساعة`, colorClass: 'status-online' };
 }
 
-// تحديث الواجهة الرئيسية
+// التبديل بين الواجهات
+function showView(viewId) {
+    document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+}
+function goHome() { showView('view-home'); currentUserId = null; renderHome(); }
+
+// تحديث الواجهة الرئيسية وإضافة أزرار التعديل والحذف
 function renderHome() {
     const list = document.getElementById('subscribersList');
     list.innerHTML = '';
@@ -84,22 +107,16 @@ function renderHome() {
         card.innerHTML = `
             <div class="user-info">
                 <h4>${user.name}</h4>
-                <p><span class="${timeData.colorClass}">● ${timeData.status}</span> | ${user.price} د.ع | ${user.tower}</p>
+                <p><span class="${timeData.colorClass}">● ${timeData.status}</span> | ${Number(user.price).toLocaleString()} د.ع | ${user.tower}</p>
             </div>
-            <div class="user-action">
-                <i class="fas fa-chevron-left" style="color:var(--text-muted);"></i>
+            <div class="user-actions-list">
+                <button class="btn-icon-small edit-btn" onclick="openEditModalFromList(${user.id}, event)"><i class="fas fa-pen"></i></button>
+                <button class="btn-icon-small delete-btn" onclick="deleteUser(${user.id}, event)"><i class="fas fa-trash"></i></button>
             </div>
         `;
         list.appendChild(card);
     });
 }
-
-// التبديل بين الواجهات
-function showView(viewId) {
-    document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-    document.getElementById(viewId).classList.add('active');
-}
-function goHome() { showView('view-home'); currentUserId = null; renderHome(); }
 
 // إضافة أو تعديل
 function openAddModal() {
@@ -116,9 +133,13 @@ function openAddModal() {
     document.getElementById('userModal').classList.add('active');
 }
 
-// تعديل بيانات المشترك
+function openEditModalFromList(id, event) {
+    event.stopPropagation();
+    currentUserId = id;
+    openEditModal();
+}
+
 function openEditModal() {
-    document.getElementById('userMenu').classList.remove('active'); 
     let user = users.find(u => u.id === currentUserId);
     if(!user) return;
     
@@ -138,20 +159,21 @@ function closeModals() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
 }
 
+// حفظ المشترك (إصلاح معرفات المشتركين)
 function saveUser() {
-    let id = document.getElementById('f-id').value;
+    let fIdVal = document.getElementById('f-id').value;
+    let finalId = fIdVal ? parseInt(fIdVal) : Date.now(); 
     let startDateObj = new Date(document.getElementById('f-start-date').value || new Date());
-    let endDateObj = new Date(startDateObj.getTime() + (30 * 24 * 60 * 60 * 1000)); // إضافة 30 يوم
+    let endDateObj = new Date(startDateObj.getTime() + (30 * 24 * 60 * 60 * 1000));
 
     let newUser = {
-        id: id ? parseInt(id) : Date.now(),
+        id: finalId,
         name: document.getElementById('f-name').value,
         phone: document.getElementById('f-phone').value,
         package: document.getElementById('f-package').value || 'Default',
         price: document.getElementById('f-price').value || 0,
         tower: document.getElementById('f-tower').value || 'N/A',
         user: document.getElementById('f-user').value || 'N/A',
-        ip: '100.' + Math.floor(Math.random()*255) + '.x.x',
         startDate: startDateObj.toISOString(),
         endDate: endDateObj.toISOString(),
         history: []
@@ -159,10 +181,12 @@ function saveUser() {
 
     if(!newUser.name || !newUser.phone) { alert("الاسم ورقم الهاتف مطلوبان!"); return; }
 
-    if (id) {
-        let index = users.findIndex(u => u.id == id);
-        newUser.history = users[index].history; 
-        users[index] = newUser;
+    if (fIdVal) {
+        let index = users.findIndex(u => u.id === finalId);
+        if(index !== -1) {
+            newUser.history = users[index].history; 
+            users[index] = newUser;
+        }
     } else {
         if(newUser.price > 0) {
             newUser.history.push({
@@ -175,7 +199,28 @@ function saveUser() {
 
     localStorage.setItem('isp_users', JSON.stringify(users));
     closeModals();
-    if(id) openProfile(newUser.id); else renderHome(); 
+    
+    // توجيه صحيح بعد الحفظ
+    if(fIdVal && currentUserId === finalId && document.getElementById('view-profile').classList.contains('active')) {
+        openProfile(finalId);
+    } else {
+        goHome(); 
+    }
+}
+
+// حذف المشترك
+function deleteUser(id, event) {
+    if(event) event.stopPropagation(); 
+    if(confirm('هل أنت متأكد من حذف هذا المشترك نهائياً؟ لا يمكن التراجع عن هذا الإجراء.')) {
+        users = users.filter(u => u.id !== id);
+        localStorage.setItem('isp_users', JSON.stringify(users));
+        
+        if(currentUserId === id && document.getElementById('view-profile').classList.contains('active')) {
+            goHome();
+        } else {
+            renderHome();
+        }
+    }
 }
 
 // بروفايل المشترك
@@ -185,18 +230,20 @@ function openProfile(id) {
     if(!user) return;
 
     let timeData = calculateTimeStatus(user.startDate, user.endDate);
-
-    // تحديث البيانات في الواجهة مع تنسيق الرقم المالي بالفواصل
     let formattedPrice = Number(user.price || 0).toLocaleString('en-US');
+    
     document.getElementById('p-name').innerText = user.name;
     document.getElementById('p-deposit').innerText = `${formattedPrice} د.ع`;
     document.getElementById('p-package').innerText = user.package;
     document.getElementById('p-tower').innerText = user.tower;
     document.getElementById('p-user').innerText = user.user;
-    document.getElementById('p-phone').innerText = user.phone;
+    
+    // عرض الهاتف بشكل كامل مع مفتاح الدولة شكلياً في الملف
+    let displayPhone = user.phone;
+    if(displayPhone.startsWith('0')) displayPhone = displayPhone.substring(1);
+    document.getElementById('p-phone').innerText = `+964 ${displayPhone}`;
     
     let statusEl = document.getElementById('p-status');
-    // إخفاء النص "متصل/غير متصل" والإبقاء على النقطة فقط في حقل الحالة لتطابق الصورة
     statusEl.innerHTML = `<i class="fas fa-circle" style="color: ${timeData.colorClass === 'status-online' ? 'var(--success-green)' : 'var(--text-main)'}"></i>`;
 
     document.getElementById('p-days').innerText = timeData.text;
@@ -224,25 +271,10 @@ function confirmRenew() {
     openProfile(currentUserId);
 }
 
-function stopSubscription() {
-    toggleMenu();
-    if(confirm('هل أنت متأكد من إيقاف المشترك فوراً؟')) {
-        let user = users.find(u => u.id === currentUserId);
-        user.endDate = new Date().toISOString(); // تعيين الانتهاء للوقت الحالي
-        localStorage.setItem('isp_users', JSON.stringify(users));
-        openProfile(currentUserId);
-    }
-}
-
-// القائمة والواتساب والسجل
-function toggleMenu() { document.getElementById('userMenu').classList.toggle('active'); }
-
+// الواتساب - إصلاح رقم الهاتف
 function openShareModal() {
     let user = users.find(u => u.id === currentUserId);
-    let timeData = calculateTimeStatus(user.startDate, user.endDate);
-    
     let text = `مرحباً ${user.name}،\n\nنود إعلامك بأن اشتراكك من النوع ${user.package} ينتهي بتاريخ ${formatDateDisplay(user.endDate)}.\nبرج: ${user.tower}\nالديون: ${user.price} د.ع\n\nفي حال احتجت لأي مساعدة، لا تتردد في التواصل معنا.`;
-    
     document.getElementById('shareText').value = text;
     document.getElementById('shareModal').classList.add('active');
 }
@@ -250,12 +282,19 @@ function openShareModal() {
 function sendWhatsApp() {
     let user = users.find(u => u.id === currentUserId);
     let text = encodeURIComponent(document.getElementById('shareText').value);
-    let phone = user.phone;
-    if(phone.startsWith('0')) phone = '964' + phone.substring(1);
-    window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+    let phone = user.phone || "";
+    
+    // فلترة الرقم ليقبله الواتساب بدقة (حذف أي حروف، وحذف الصفر و 964 إذا كررها المستخدم)
+    phone = phone.replace(/\D/g, ''); 
+    if (phone.startsWith('0')) phone = phone.substring(1);
+    if (phone.startsWith('964')) phone = phone.substring(3);
+    
+    let finalPhone = '964' + phone; // دمج مفتاح الدولة النهائي
+    window.open(`https://wa.me/${finalPhone}?text=${text}`, '_blank');
     closeModals();
 }
 
+// العمليات المالية
 function openDepositModal() {
     document.getElementById('t-amount').value = '';
     document.getElementById('depositModal').classList.add('active');
@@ -279,6 +318,7 @@ function saveTransaction() {
     closeModals(); openProfile(currentUserId); 
 }
 
+// السجل
 function openHistory() {
     let user = users.find(u => u.id === currentUserId);
     let list = document.getElementById('historyList');
@@ -312,4 +352,5 @@ function filterUsers() {
     });
 }
 
-window.onload = renderHome;
+// تشغيل التطبيق عند التحميل
+window.onload = initApp;
