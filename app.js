@@ -32,9 +32,18 @@ function formatDateTimeLocal(date) {
     return d.toISOString().slice(0, 16);
 }
 
+// تعديل صيغة التاريخ لتطابق الصورة
 function formatDateDisplay(dateStr) {
     let d = new Date(dateStr);
-    return d.toLocaleString('ar-IQ', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
+    let yyyy = d.getFullYear();
+    let mm = String(d.getMonth() + 1).padStart(2, '0');
+    let dd = String(d.getDate()).padStart(2, '0');
+    let hours = d.getHours();
+    let minutes = String(d.getMinutes()).padStart(2, '0');
+    let ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; 
+    return `${yyyy}/${mm}/${dd} ${hours}:${minutes} ${ampm}`;
 }
 
 function calculateTimeStatus(startDateStr, endDateStr) {
@@ -43,7 +52,8 @@ function calculateTimeStatus(startDateStr, endDateStr) {
     let diffMs = end - now;
 
     if (diffMs <= 0) {
-        return { status: 'غير متصل', text: 'منتهي الصلاحية', colorClass: 'status-offline' };
+        // تعديل "منتهي الصلاحية" إلى "منتهي" لتطابق الصورة
+        return { status: 'غير متصل', text: 'منتهي', colorClass: 'status-offline' };
     }
 
     let diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -91,13 +101,6 @@ function showView(viewId) {
 }
 function goHome() { showView('view-home'); currentUserId = null; renderHome(); }
 
-// رسالة الصيانة (الأزرار السفلية)
-function showMaintenance() {
-    let toast = document.getElementById('maintenanceToast');
-    toast.classList.add('show');
-    setTimeout(() => { toast.classList.remove('show'); }, 3000);
-}
-
 // إضافة أو تعديل
 function openAddModal() {
     currentUserId = null;
@@ -113,8 +116,9 @@ function openAddModal() {
     document.getElementById('userModal').classList.add('active');
 }
 
+// تعديل بيانات المشترك
 function openEditModal() {
-    toggleMenu(); 
+    document.getElementById('userMenu').classList.remove('active'); 
     let user = users.find(u => u.id === currentUserId);
     if(!user) return;
     
@@ -182,19 +186,20 @@ function openProfile(id) {
 
     let timeData = calculateTimeStatus(user.startDate, user.endDate);
 
+    // تحديث البيانات في الواجهة مع تنسيق الرقم المالي بالفواصل
+    let formattedPrice = Number(user.price || 0).toLocaleString('en-US');
     document.getElementById('p-name').innerText = user.name;
-    document.getElementById('p-deposit').innerText = user.price;
+    document.getElementById('p-deposit').innerText = `${formattedPrice} د.ع`;
     document.getElementById('p-package').innerText = user.package;
     document.getElementById('p-tower').innerText = user.tower;
     document.getElementById('p-user').innerText = user.user;
-    document.getElementById('p-ip').innerText = user.ip;
+    document.getElementById('p-phone').innerText = user.phone;
     
     let statusEl = document.getElementById('p-status');
-    statusEl.innerHTML = `<i class="fas fa-circle"></i> ${timeData.status}`;
-    statusEl.className = timeData.colorClass;
+    // إخفاء النص "متصل/غير متصل" والإبقاء على النقطة فقط في حقل الحالة لتطابق الصورة
+    statusEl.innerHTML = `<i class="fas fa-circle" style="color: ${timeData.colorClass === 'status-online' ? 'var(--success-green)' : 'var(--text-main)'}"></i>`;
 
     document.getElementById('p-days').innerText = timeData.text;
-    document.getElementById('p-start-date').innerText = formatDateDisplay(user.startDate);
     document.getElementById('p-end-date').innerText = formatDateDisplay(user.endDate);
 
     showView('view-profile');
@@ -236,7 +241,7 @@ function openShareModal() {
     let user = users.find(u => u.id === currentUserId);
     let timeData = calculateTimeStatus(user.startDate, user.endDate);
     
-    let text = `مرحباً ${user.name}،\n\nنود إعلامك بأن اشتراكك من النوع ${user.package} ينتهي بتاريخ ${formatDateDisplay(user.endDate)}.\nبرج: ${user.tower}\nقيمة الاشتراك: ${user.price} د.ع\nالحالة الحالية: ${timeData.status}\n\nفي حال احتجت لأي مساعدة، لا تتردد في التواصل معنا.`;
+    let text = `مرحباً ${user.name}،\n\nنود إعلامك بأن اشتراكك من النوع ${user.package} ينتهي بتاريخ ${formatDateDisplay(user.endDate)}.\nبرج: ${user.tower}\nالديون: ${user.price} د.ع\n\nفي حال احتجت لأي مساعدة، لا تتردد في التواصل معنا.`;
     
     document.getElementById('shareText').value = text;
     document.getElementById('shareModal').classList.add('active');
