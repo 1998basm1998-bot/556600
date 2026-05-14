@@ -9,20 +9,23 @@
 </head>
 <body>
 
-<!-- زر الوضع الليلي/النهاري -->
 <button id="themeToggle" class="btn-icon theme-btn" onclick="toggleTheme()">
     <i class="fas fa-moon" id="themeIcon"></i>
 </button>
 
-<!-- رسالة الصيانة المتحركة (Toast) -->
-<div id="maintenanceToast" class="toast">
-    <i class="fas fa-tools"></i> هذا الزر قيد الصيانة حالياً
-</div>
-
 <div class="app-container">
     
-    <!-- واجهة المشتركين الرئيسية -->
-    <div id="view-home" class="view-section active">
+    <div id="view-login" class="view-section active login-wrapper">
+        <div class="login-box glass-effect">
+            <i class="fas fa-fingerprint lock-icon"></i>
+            <h2 style="margin-bottom:20px; color:var(--text-main);">تأكيد الدخول</h2>
+            <input type="password" id="loginPassword" class="input-field" placeholder="رمز الدخول..." style="text-align:center; font-size: 18px; letter-spacing: 2px;">
+            <button class="btn-primary" onclick="checkLogin()" style="margin-top:15px;"><i class="fas fa-unlock"></i> دخول</button>
+            <p id="loginError" style="color:var(--danger-red); font-size:13px; margin-top:10px; display:none;">الرمز غير صحيح، يرجى المحاولة مرة أخرى.</p>
+        </div>
+    </div>
+
+    <div id="view-home" class="view-section">
         <header class="top-header">
             <button class="btn-icon btn-add" onclick="openAddModal()">
                 <i class="fas fa-plus"></i>
@@ -37,51 +40,51 @@
         </div>
 
         <div class="subscribers-list" id="subscribersList">
-            <!-- سيتم إضافة المشتركين هنا بواسطة الجافا سكريبت -->
-        </div>
+            </div>
     </div>
 
-    <!-- واجهة بروفايل المشترك -->
     <div id="view-profile" class="view-section">
         <header class="profile-header-bar">
             <button class="btn-icon" onclick="goHome()"><i class="fas fa-arrow-right"></i></button>
             <div class="profile-actions">
                 <button class="btn-icon" onclick="openDepositModal()"><i class="fas fa-dollar-sign"></i></button>
                 <button class="btn-icon" onclick="openShareModal()"><i class="fas fa-bell"></i></button>
+                <button class="btn-icon" onclick="openEditModal()"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon" onclick="deleteUser(currentUserId)"><i class="fas fa-trash" style="color:var(--danger-red);"></i></button>
                 <button class="btn-icon" onclick="openHistory()"><i class="fas fa-history"></i></button>
-                <div class="dropdown">
-                    <button class="btn-icon" onclick="toggleMenu()"><i class="fas fa-ellipsis-v"></i></button>
-                    <div class="dropdown-menu" id="userMenu">
-                        <a href="#" onclick="openEditModal()"><i class="fas fa-pen"></i> تعديل المعلومات</a>
-                        <a href="#" onclick="stopSubscription()"><i class="fas fa-pause-circle"></i> إيقاف</a>
-                    </div>
-                </div>
             </div>
         </header>
 
         <div class="profile-card dark-card">
-            <h2 id="p-name">--</h2>
-            <p>الإيداع: <span id="p-deposit">0</span> د.ع</p>
+            <div class="card-logo">
+                <svg viewBox="0 0 24 24">
+                    <path d="M4 4h16v3H8v3.5h10v3H8v4h12v3H4z"/>
+                </svg>
+            </div>
+            <div class="card-info">
+                <div class="label-small">الاسم</div>
+                <h2 id="p-name" class="profile-name">--</h2>
+                <div class="label-small">الديون</div>
+                <p id="p-deposit" class="profile-debt">0 د.ع</p>
+            </div>
         </div>
 
         <div class="profile-details card">
-            <div class="detail-row"><span>الحالة</span> <span id="p-status"><i class="fas fa-circle"></i> --</span></div>
-            <div class="detail-row"><span>المتبقي</span> <span id="p-days" style="font-weight: bold; color: var(--warning-orange);">--</span></div>
-            <div class="detail-row"><span>وقت التفعيل</span> <span id="p-start-date" class="text-muted-small">--</span></div>
-            <div class="detail-row"><span>تاريخ الإيقاف</span> <span id="p-end-date" class="text-muted-small">--</span></div>
-            <div class="detail-row"><span>نوع الاشتراك</span> <span id="p-package" class="text-blue">--</span></div>
-            <div class="detail-row"><span>البرج</span> <span id="p-tower">--</span></div>
-            <div class="detail-row"><span>اليوزر</span> <span id="p-user">--</span></div>
-            <div class="detail-row"><span>IP</span> <span id="p-ip">--</span></div>
+            <div class="detail-row"><span>الحالة</span> <span id="p-status" class="detail-value"><i class="fas fa-circle"></i> --</span></div>
+            <div class="detail-row"><span>المتبقي</span> <span id="p-days" class="detail-value">--</span></div>
+            <div class="detail-row"><span>نوع الإشتراك</span> <span id="p-package" class="text-blue">--</span></div>
+            <div class="detail-row"><span>البرج</span> <span id="p-tower" class="detail-value">--</span></div>
+            <div class="detail-row"><span>اليوزر</span> <span id="p-user" class="detail-value">--</span></div>
+            <div class="detail-row"><span>رقم الهاتف الاول</span> <span id="p-phone" class="detail-value" style="direction: ltr;">--</span></div>
+            <div class="detail-row"><span>تاريخ انتهاء الإشتراك</span> <span id="p-end-date" class="detail-value" style="direction: ltr;">--</span></div>
         </div>
 
         <div class="action-buttons-bottom">
             <button class="btn-outline" onclick="openDepositModal()"><i class="fas fa-credit-card"></i> إيداع مبلغ</button>
-            <button class="btn-primary" onclick="openRenewModal()"><i class="fas fa-sync"></i> تجديد الاشتراك</button>
+            <button class="btn-primary" onclick="openRenewModal()"><i class="fas fa-sync"></i> تجديد الإشتراك</button>
         </div>
     </div>
 
-    <!-- واجهة السجل (التاريخ) -->
     <div id="view-history" class="view-section">
         <header class="profile-header-bar">
             <button class="btn-icon" onclick="closeHistory()"><i class="fas fa-arrow-right"></i></button>
@@ -90,23 +93,24 @@
         <div class="history-list" id="historyList"></div>
     </div>
 
-    <!-- شريط التنقل السفلي -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" id="mainNav" style="display: none;">
         <a href="#" class="nav-item active" onclick="goHome()"><i class="fas fa-users"></i><span>المشتركين</span></a>
-        <a href="#" class="nav-item" onclick="showMaintenance()"><i class="fas fa-satellite-dish"></i><span>الأجهزة</span></a>
-        <a href="#" class="nav-item" onclick="showMaintenance()"><i class="fas fa-chart-bar"></i><span>الاحصائيات</span></a>
-        <a href="#" class="nav-item" onclick="showMaintenance()"><i class="fas fa-ellipsis-h"></i><span>المزيد</span></a>
     </nav>
 
-    <!-- Modal: إضافة/تعديل مشترك -->
     <div class="modal-overlay" id="userModal">
         <div class="modal-content glass-effect">
             <h3 id="modalTitle">إضافة مشترك جديد</h3>
             <input type="hidden" id="f-id">
             <input type="text" id="f-name" class="input-field" placeholder="اسم المشترك">
-            <input type="tel" id="f-phone" class="input-field" placeholder="رقم الهاتف (مثال: 07700000000)">
-            <input type="text" id="f-package" class="input-field" placeholder="نوع الاشتراك (مثال: Free Admin)">
-            <input type="number" id="f-price" class="input-field" placeholder="المبلغ المدفوع (د.ع)">
+            
+            <label style="font-size: 12px; margin-top: 10px; display: block;">رقم الهاتف</label>
+            <div class="phone-input-group">
+                <span class="country-prefix">+964</span>
+                <input type="tel" id="f-phone" class="input-field-no-border" placeholder="78 أو 77 ...">
+            </div>
+
+            <input type="text" id="f-package" class="input-field" placeholder="نوع الاشتراك (مثال: Plus)">
+            <input type="number" id="f-price" class="input-field" placeholder="الديون أو الرصيد (د.ع)">
             <input type="text" id="f-tower" class="input-field" placeholder="البرج">
             <input type="text" id="f-user" class="input-field" placeholder="اليوزر">
             <label style="font-size: 12px; margin-top: 10px; display: block;">تاريخ ووقت التفعيل (يضاف له 30 يوم تلقائياً)</label>
@@ -118,7 +122,6 @@
         </div>
     </div>
 
-    <!-- Modal: تجديد الاشتراك -->
     <div class="modal-overlay" id="renewModal">
         <div class="modal-content glass-effect">
             <h3>تجديد الاشتراك</h3>
@@ -132,11 +135,10 @@
         </div>
     </div>
 
-    <!-- Modal: المشاركة (الواتساب) -->
     <div class="modal-overlay" id="shareModal">
         <div class="modal-content glass-effect">
             <h3>مشاركة</h3>
-            <p class="share-note">سيتم إرسال رسالة تفصيلية للمشترك.</p>
+            <p class="share-note" style="margin-bottom: 8px;">سيتم إرسال رسالة تفصيلية للمشترك عبر الواتساب.</p>
             <textarea id="shareText" class="input-field" rows="6"></textarea>
             <div class="modal-btns flex-col">
                 <button class="btn-primary" onclick="sendWhatsApp()"><i class="fab fa-whatsapp"></i> إرسال عبر WhatsApp</button>
@@ -145,7 +147,6 @@
         </div>
     </div>
 
-    <!-- Modal: إيداع/دين -->
     <div class="modal-overlay" id="depositModal">
         <div class="modal-content glass-effect">
             <h3>العمليات المالية</h3>
